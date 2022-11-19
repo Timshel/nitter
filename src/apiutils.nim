@@ -123,6 +123,8 @@ proc fetchRaw*(url: Uri; api: Api): Future[string] {.async.} =
 
     updateToken()
 
+    echo "fetchRaw --- url: ", url
+
     if result.startsWith("{\"errors"):
       let errors = result.fromJson(Errors)
       if errors in {invalidToken, forbidden, badToken}:
