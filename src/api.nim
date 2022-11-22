@@ -54,13 +54,6 @@ proc getUser*(username: string): Future[User] {.async.} =
     json = await fetchRaw(userShow ? ps, Api.userShow)
   result = parseUser(json, username)
 
-proc getRawUser*(username: string): Future[string] {.async.} =
-  if username.len == 0: return
-  let
-    ps = genParams({"screen_name": username})
-  
-  result = await fetchRaw(userShow ? ps, Api.userShow)
-
 proc getUserById*(userId: string): Future[User] {.async.} =
   if userId.len == 0: return
   let
@@ -74,13 +67,6 @@ proc getTimeline*(id: string; after=""; replies=false): Future[Timeline] {.async
     ps = genParams({"userId": id, "include_tweet_replies": $replies}, after)
     url = timeline / (id & ".json") ? ps
   result = parseTimeline(await fetch(url, Api.timeline), after)
-
-proc getRawTimeline*(id: string; after=""; replies=false): Future[string] =
-  if id.len == 0: return
-  let
-    ps = genParams({"userId": id, "include_tweet_replies": $replies}, after)
-    url = timeline / (id & ".json") ? ps
-  result = fetchRaw(url, Api.timeline)
 
 proc getMediaTimeline*(id: string; after=""): Future[Timeline] {.async.} =
   if id.len == 0: return

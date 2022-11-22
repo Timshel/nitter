@@ -1,12 +1,23 @@
-# SPDX-License-Identifier: AGPL-3.0-only
-import strutils, strformat, uri
-
 import jester
+import json
+import strutils
+import std/json
+import std/jsonutils
+import times
 
 import router_utils
-import ../experimental/parser/utils
-import ".."/[types, api, formatters]
+import ".."/[types, api]
 from ../types import User, Error
+
+proc toJsonHook*(time: DateTime): JsonNode = 
+  let errBody: string = $(%* {"error": "User not found"})
+  %*($time)
+
+proc toErrorBody*(msg: string): string = $(%* {"error": msg})
+
+proc scopedToJson*(user: User): string = $toJson(user)
+
+proc scopedToJson*(tweets: seq[Tweet]): string = $toJson(tweets)
 
 export api
 
@@ -18,22 +29,23 @@ proc createApiRouter*(cfg: Config) =
 
       let
         prefs = cookiePrefs()
-        json = await getRawUser(@"name")
+        user = await getUser(@"name")
+        
+      if user.id == "":
+        resp Http404, {"Content-Type": "application/json"}, toErrorBody("Invalid handle")
 
-      if json.startsWith("{\"errors"):
-        resp Http404, {"Content-Type": "application/json"}, json
-
-      resp Http200, {"Content-Type": "application/json"}, json
+      resp Http200, {"Content-Type": "application/json"}, scopedToJson(user)
 
     get "/api/timeline/@id":
-      if @"id".len > 10:
-        resp Http400, {"Content-Type": "application/json"}, "Id too long"
+      if @"id".len > 20:
+        resp Http400, {"Content-Type": "application/json"}, toErrorBody("Id too long")
 
       let
         prefs = cookiePrefs()
-        json = await getRawTimeline(@"id")
+        timeline = await getTimeline(@"id")
 
-      if json.startsWith("{\"errors"):
-        resp Http404, {"Content-Type": "application/json"}, json
+      if timeline.content.len == 0:
+        resp Http404, {"Content-Type": "application/json"}, ""
         
-      resp Http200, {"Content-Type": "application/json"}, json
+      resp Http200, {"Content-Type": "application/json"}, scopedToJson(timeline.content)
+      
